@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncpg
+psycopg2-binary
+python-multipart
+boto3
+pydantic>=2.0
+pydantic-settings>=2.0
+redis
+celery
+requests
+asyncpg

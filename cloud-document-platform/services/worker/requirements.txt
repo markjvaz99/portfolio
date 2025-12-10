@@ -1,0 +1,8 @@
+boto3
+sqlalchemy
+psycopg2-binary
+redis
+celery
+pdfminer.six
+pytesseract
+pillow

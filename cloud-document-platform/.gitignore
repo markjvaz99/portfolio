@@ -1,0 +1,83 @@
+#######################################
+# 🔐 SECRETS & ENV FILES (CRITICAL)
+#######################################
+.env
+.env.*
+*.env
+secrets/
+*.pem
+*.key
+*.crt
+
+#######################################
+# 🏗 TERRAFORM (CRITICAL)
+#######################################
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.*
+infra/terraform/crash.log
+infra/terraform/crash.*.log
+
+#######################################
+# 🐍 PYTHON
+#######################################
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+
+#######################################
+# 🐳 DOCKER
+#######################################
+**/docker-compose.override.yml
+*.log
+docker-data/
+.pgdata/
+redis-data/
+
+#######################################
+# 📦 CELERY
+#######################################
+celerybeat-schedule
+celerybeat.pid
+
+#######################################
+# 💻 OS / EDITORS
+#######################################
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+#######################################
+# 📊 DATABASE DUMPS & EXPORTS
+#######################################
+*.sql
+*.dump
+*.bak
+
+#######################################
+# 📂 UPLOADS / MEDIA
+#######################################
+uploads/
+media/
+staticfiles/
+
+#######################################
+# 🔐 AWS / CLOUD CREDENTIALS
+#######################################
+.aws/
+*credentials*
+*aws_access*
+*secret*

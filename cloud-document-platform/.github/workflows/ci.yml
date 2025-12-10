@@ -1,0 +1,28 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: appdb
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Install deps
+        run: |
+          pip install poetry
+          cd services/api
+          poetry install
+      - name: Run tests
+        run: |
+          cd services/api
+          pytest -q
