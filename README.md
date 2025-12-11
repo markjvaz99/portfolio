@@ -1,7 +1,6 @@
 # Portfolio : Mark Joseph Vaz
 
-This repository contains my complete technical portfolio for Master's applications in Germany,
-covering:
+This repository contains my complete techincal portfolio:
 
 - Data Engineering (ETL, Spark, Airflow, Kafka)
 - FastAPI Backend Development
