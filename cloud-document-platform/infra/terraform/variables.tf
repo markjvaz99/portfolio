@@ -1,16 +1,19 @@
-variable "bucket_name" {
-  description = "The unique name of the S3 bucket"
-  type        = string
-}
-
 variable "region" {
-  description = "AWS region to deploy resources in"
-  type        = string
-  default     = "us-east-1"
+  default = "us-east-1"
 }
 
 variable "environment" {
-  description = "Environment name (dev, prod, etc.)"
-  type        = string
-  default     = "dev"
+  default = "dev"
+}
+
+variable "bucket_name" {
+    default = "my-unique-bucket-markjvaz-123"
+}
+
+variable "ami" {
+  default = "ami-0c101f26f147fa7fd" # Amazon Linux 2023 ARM64 (valid)
+}
+
+variable "instance_type" {
+  default = "t3.micro"  # ARM Free Tier
 }
