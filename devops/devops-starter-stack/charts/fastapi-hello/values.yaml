@@ -1,35 +1,28 @@
 replicaCount: 1
-
 image:
   repository: ghcr.io/markjvaz99/fastapi-hello
-  tag: "v0.1.0"
+  tag: "ci-20208314504"
   pullPolicy: IfNotPresent
-
 service:
   type: ClusterIP
   port: 8000
-
 ingress:
   enabled: true
   host: fastapi.local
   path: /
-
 resources: {}
-
 livenessProbe:
   httpGet:
     path: /health
     port: 8000
   initialDelaySeconds: 5
   periodSeconds: 10
-
 readinessProbe:
   httpGet:
     path: /
     port: 8000
   initialDelaySeconds: 2
   periodSeconds: 5
-
 env:
   - name: MESSAGE
     value: "Hello from Kubernetes (Helm + ArgoCD)!"
