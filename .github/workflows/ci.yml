@@ -61,7 +61,7 @@ jobs:
           git config user.email "github-actions@users.noreply.github.com"
           # update the tag in values.yaml
           yq eval ".image.tag = \"${TAG}\"" -i ./devops/devops-starter-stack/charts/fastapi-hello/values.yaml
-          git add charts/fastapi-hello/values.yaml
+          git add ./devops/devops-starter-stack/charts/fastapi-hello/values.yaml
           git commit -m "ci: update image tag to ${TAG}" || echo "no changes to commit"
           # push back using the checked out credentials
           git push
