@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-hello
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi-hello
+  template:
+    metadata:
+      labels:
+        app: fastapi-hello
+    spec:
+      containers:
+      - name: fastapi-hello
+        image: fastapi-hello:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
