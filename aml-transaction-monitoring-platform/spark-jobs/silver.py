@@ -9,7 +9,7 @@ spark = (
     .getOrCreate()
 )
 
-bronze = spark.readStream.format("delta").load("/app/data/bronze/transactions")
+bronze = spark.readStream.format("delta").load("/app/data/bronze/transactions") # Test
 
 silver = (
     bronze
