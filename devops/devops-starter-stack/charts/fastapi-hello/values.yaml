@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: ghcr.io/markjvaz99/fastapi-hello
-  tag: "ci-20208359024"
+  tag: "ci-20224944379"
   pullPolicy: IfNotPresent
 service:
   type: ClusterIP
