@@ -31,5 +31,6 @@ def get_synthesizer(llm):
     return get_response_synthesizer(
         text_qa_template=prompt,
         response_mode="simple_summarize",
-        llm=llm
+        llm=llm,
+        streaming=True
     )

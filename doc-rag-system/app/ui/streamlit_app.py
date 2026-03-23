@@ -1,426 +1,368 @@
 import streamlit as st
 import requests
 import time
+import json
 
-API_URL = "http://rag-app:8000/api/v1/query/test-rag"
-INGEST_URL = "http://rag-app:8000/api/v1/query/ingest"
+API_URL = "http://rag-app:8000/api/v1/query/test-rag-stream"
 
-# ── Page config ────────────────────────────────────────────────────────────────
+# ─── Page config ────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="RAG Interface",
+    page_title="RAG Chat",
+    page_icon="🧠",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
-# ── Custom CSS ─────────────────────────────────────────────────────────────────
+# ─── Custom CSS (ChatGPT-inspired dark theme) ────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
 
-/* ── Root palette ── */
-:root {
-    --bg:       #0d0f14;
-    --surface:  #13161e;
-    --border:   #1f2433;
-    --accent:   #5b7fff;
-    --accent2:  #a78bfa;
-    --text:     #e4e8f5;
-    --muted:    #5a6282;
-    --green:    #34d399;
-    --red:      #f87171;
-    --amber:    #fbbf24;
+/* Font only — SAFE */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&display=swap');
+
+html, body {
+    font-family: 'Sora', sans-serif;
+    background-color: #0d0d0d;
+    color: #ececec;
 }
-
-/* ── Global resets ── */
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-    color: var(--text);
-}
-
-.stApp {
-    background: var(--bg);
-}
-
-/* Subtle grid texture */
-.stApp::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(91,127,255,.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(91,127,255,.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* ── Sidebar ── */
-[data-testid="stSidebar"] {
-    background: var(--surface) !important;
-    border-right: 1px solid var(--border);
-}
-
-[data-testid="stSidebar"] .stMarkdown h1,
-[data-testid="stSidebar"] .stMarkdown h2,
-[data-testid="stSidebar"] .stMarkdown h3 {
-    font-family: 'DM Serif Display', serif;
-    color: var(--text);
-}
-
-/* Sidebar section labels */
-.sidebar-section {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: .12em;
+            
+.chat-title {
+    padding: 0rem 0 0rem;
+    font-size: 3.2rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
-    margin: 1.4rem 0 .4rem;
-}
+    margin-bottom: 0.6rem;
+    position: relative;
 
-/* ── Page title ── */
-.page-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 2.6rem;
-    line-height: 1.1;
-    background: linear-gradient(135deg, var(--text) 30%, var(--accent2));
+    /* Gradient text */
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #22d3ee, #60a5fa);
+    background-size: 300% 300%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 0;
+
+    /* Glow */
+    text-shadow: 0 0 8px rgba(96,165,250,0.25),
+                 0 0 16px rgba(167,139,250,0.15);
+
+    /* Animation */
+    animation: gradientShift 6s ease infinite;
 }
 
-.page-subtitle {
-    font-family: 'DM Mono', monospace;
-    font-size: .75rem;
-    color: var(--muted);
-    letter-spacing: .08em;
-    margin-top: .2rem;
-    margin-bottom: 2rem;
+/* Gradient animation */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-/* ── Query textarea ── */
-.stTextArea textarea {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 10px !important;
-    color: var(--text) !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: .95rem !important;
-    transition: border-color .2s;
-    resize: vertical;
-}
-
-.stTextArea textarea:focus {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 0 3px rgba(91,127,255,.15) !important;
-}
-
-/* ── Buttons ── */
-.stButton > button {
-    background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-family: 'DM Mono', monospace !important;
-    font-size: .8rem !important;
-    letter-spacing: .05em !important;
-    padding: .55rem 1.4rem !important;
-    transition: opacity .2s, transform .15s !important;
-}
-
-.stButton > button:hover {
-    opacity: .88 !important;
-    transform: translateY(-1px) !important;
-}
-
-/* Secondary (ingest) button */
-.stButton.secondary > button {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text) !important;
-}
-
-/* ── Answer card ── */
-.answer-card {
-    background: linear-gradient(135deg, rgba(91,127,255,.08), rgba(167,139,250,.06));
-    border: 1px solid rgba(91,127,255,.25);
-    border-radius: 12px;
-    padding: 1.4rem 1.6rem;
-    margin: 1rem 0 1.6rem;
-    position: relative;
-    overflow: hidden;
-}
-
-.answer-card::before {
-    content: '';
+/* Subtle scanning line effect */
+.chat-title::after {
+    content: "";
     position: absolute;
-    top: 0; left: 0;
-    width: 3px; height: 100%;
-    background: linear-gradient(180deg, var(--accent), var(--accent2));
-    border-radius: 3px 0 0 3px;
+    left: 0;
+    bottom: -1px;
+    width: 100%;
+    height: 1px;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(96,165,250,0.8),
+        transparent
+    );
+
+    animation: scanLine 3s linear infinite;
 }
 
-.answer-card p {
-    margin: 0;
-    line-height: 1.75;
-    font-size: 1rem;
+@keyframes scanLine {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
 }
 
-/* ── Source expanders ── */
-[data-testid="stExpander"] {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
+
+/* DO NOT touch Streamlit internal class system */
+
+/* Sidebar styling (safe only) */
+[data-testid="stSidebar"] {
+    background-color: #171717;
+    border-right: 1px solid #2a2a2a;
+}
+
+/* Chat message styling (safe) */
+[data-testid="stChatMessage"] {
+    border-radius: 14px;
+    padding: 0.9rem 1.2rem;
+    margin: 0.4rem 0;
+}
+
+/* Input styling */
+[data-testid="stChatInput"] {
+    border-radius: 14px;
+}
+            
+/* ── Chat messages ── */
+[data-testid="stChatMessage"] {
+    border-radius: 14px;
+    padding: 0.9rem 1.2rem !important;
+    margin: 0.35rem 0 !important;
+    line-height: 1.65;
+    font-size: 0.95rem;
+    border: none !important;
+    box-shadow: none !important;
+}
+            
+            /* User bubble */
+[data-testid="stChatMessage"][data-testid*="user"],
+.stChatMessage:has([data-testid="chatAvatarIcon-user"]) {
+    background-color: #1a1a2e !important;
+}
+ 
+/* Assistant bubble */
+[data-testid="stChatMessage"][data-testid*="assistant"],
+.stChatMessage:has([data-testid="chatAvatarIcon-assistant"]) {
+    background-color: #141414 !important;
+}
+ 
+/* ── Source expander ── */
+.stExpander {
+    background: #1a1a1a !important;
+    border: 1px solid #2c2c2c !important;
     border-radius: 10px !important;
-    margin-bottom: .6rem;
+    margin-top: 0.6rem;
 }
-
-[data-testid="stExpander"]:hover {
-    border-color: rgba(91,127,255,.4) !important;
-}
-
-[data-testid="stExpander"] summary {
-    font-family: 'DM Mono', monospace !important;
-    font-size: .82rem !important;
-    color: var(--text) !important;
-}
-
-/* ── Score badge ── */
-.score-badge {
-    display: inline-block;
-    background: rgba(91,127,255,.15);
-    color: var(--accent);
-    font-family: 'DM Mono', monospace;
-    font-size: .7rem;
-    padding: .15rem .55rem;
-    border-radius: 999px;
-    border: 1px solid rgba(91,127,255,.3);
-    margin-left: .5rem;
-    vertical-align: middle;
-}
-
-/* Score colour tiers */
-.score-high  { background: rgba(52,211,153,.12); color: var(--green);  border-color: rgba(52,211,153,.3); }
-.score-mid   { background: rgba(251,191,36,.10);  color: var(--amber); border-color: rgba(251,191,36,.3); }
-.score-low   { background: rgba(248,113,113,.10); color: var(--red);   border-color: rgba(248,113,113,.3); }
-
-/* ── Status / info boxes ── */
-.stAlert {
-    border-radius: 10px !important;
-    font-family: 'DM Sans', sans-serif !important;
-}
-
-/* ── Divider ── */
-hr {
-    border-color: var(--border) !important;
-    margin: 2rem 0 1rem !important;
-}
-
-/* ── Metrics row ── */
-.metric-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: .3rem .9rem;
-    font-family: 'DM Mono', monospace;
-    font-size: .75rem;
-    color: var(--muted);
-    margin-right: .5rem;
-}
-
-.metric-pill span.val {
-    color: var(--text);
+.stExpander summary {
+    font-size: 0.8rem !important;
+    color: #888 !important;
     font-weight: 500;
+    letter-spacing: 0.03em;
 }
-
-/* Toggle / slider labels */
-.stToggle label, .stSlider label {
-    font-family: 'DM Mono', monospace !important;
-    font-size: .8rem !important;
-    color: var(--muted) !important;
+.stExpander summary:hover {
+    color: #bbb !important;
 }
-
-/* ── Spinner ── */
-.stSpinner > div {
-    border-top-color: var(--accent) !important;
-}
-
-/* Source text inside expander */
-.source-text {
-    font-size: .88rem;
-    line-height: 1.7;
-    color: #c4c9dc;
-    padding: .2rem 0;
-}
-
-/* Query history item */
-.history-item {
-    padding: .5rem .7rem;
+.source-card {
+    background: #111;
+    border: 1px solid #252525;
     border-radius: 8px;
-    border: 1px solid var(--border);
-    margin-bottom: .4rem;
-    font-size: .82rem;
-    color: var(--muted);
-    cursor: pointer;
-    transition: border-color .2s, color .2s;
-    font-family: 'DM Mono', monospace;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 0.65rem 0.9rem;
+    margin: 0.4rem 0;
+    font-size: 0.82rem;
+    color: #ccc;
+    line-height: 1.5;
+}
+.source-score {
+    font-size: 0.72rem;
+    color: #555;
+    margin-top: 0.3rem;
+    font-variant-numeric: tabular-nums;
+}
+ 
+/* ── Chat input ── */
+[data-testid="stChatInput"] {
+    background: #1a1a1a !important;
+    border: 1px solid #2e2e2e !important;
+    border-radius: 14px !important;
+    padding: 0.4rem 0.8rem !important;
+}
+[data-testid="stChatInput"] textarea {
+    background: transparent !important;
+    color: #ececec !important;
+    font-family: 'Sora', sans-serif !important;
+    font-size: 0.94rem !important;
+}
+[data-testid="stChatInput"] button {
+    background: #2563eb !important;
+    border-radius: 8px !important;
+}
+ 
+/* ── Thinking dots animation ── */
+@keyframes blink {
+    0%, 80%, 100% { opacity: 0.15; }
+    40%           { opacity: 1; }
+}
+.thinking-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #555;
+    margin: 0 2px;
+    animation: blink 1.2s infinite;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+.thinking-label {
+    font-size: 0.82rem;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.4rem 0;
 }
 
-.history-item:hover {
-    border-color: var(--accent);
-    color: var(--text);
-}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Session state ──────────────────────────────────────────────────────────────
-if "history" not in st.session_state:
-    st.session_state.history = []   # list of {"query": str, "answer": str, "sources": list}
-if "prefill_query" not in st.session_state:
-    st.session_state.prefill_query = ""
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+
+# ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## RAG Settings")
+    st.markdown("### ⚙️ Actions")
+    st.divider()
 
-    st.markdown('<p class="sidebar-section">Display</p>', unsafe_allow_html=True)
-    show_scores = st.toggle("Show similarity scores", value=True)
-    max_sources = st.slider("Max sources", 1, 20, 5)
-
-    st.markdown('<p class="sidebar-section">History</p>', unsafe_allow_html=True)
-    if st.session_state.history:
-        for i, entry in enumerate(reversed(st.session_state.history[-10:])):
-            label = entry["query"][:60] + ("…" if len(entry["query"]) > 60 else "")
-            if st.button(label, key=f"hist_{i}", use_container_width=True):
-                st.session_state.prefill_query = entry["query"]
-                st.rerun()
-    else:
-        st.caption("No queries yet.")
-
-    if st.session_state.history:
-        if st.button("🗑 Clear history", use_container_width=True):
-            st.session_state.history = []
-            st.rerun()
-
-    st.markdown('<p class="sidebar-section">Data</p>', unsafe_allow_html=True)
-    ingest = st.button("📥 Ingest Documents", use_container_width=True)
-
-# ── Header ─────────────────────────────────────────────────────────────────────
-st.markdown('<h1 class="page-title">RAG Interface</h1>', unsafe_allow_html=True)
-st.markdown('<p class="page-subtitle">retrieval-augmented generation · semantic search</p>', unsafe_allow_html=True)
-
-# ── Ingest handler ─────────────────────────────────────────────────────────────
-if ingest:
-    with st.spinner("Ingesting documents…"):
-        try:
-            res = requests.get(INGEST_URL, timeout=300)
-            if res.status_code == 200:
-                st.success("✅ " + res.json().get("response", "Ingestion complete."))
-            else:
-                st.error(f"Ingest failed — HTTP {res.status_code}")
-        except Exception as e:
-            st.error(f"Connection error: {e}")
-
-# ── Query input ────────────────────────────────────────────────────────────────
-query = st.text_area(
-    "Query",
-    value=st.session_state.prefill_query,
-    height=110,
-    placeholder="What would you like to know? …",
-    label_visibility="collapsed",
-)
-st.session_state.prefill_query = ""  # reset after use
-
-c1, c2 = st.columns([1, 7])
-with c1:
-    submit = st.button("Search →", use_container_width=True)
-
-# ── Query handler ──────────────────────────────────────────────────────────────
-if submit and query.strip():
-    t0 = time.time()
-    with st.spinner("Searching…"):
-        try:
-            res = requests.post(API_URL, json={"query": query.strip()}, timeout=300)
-            elapsed = time.time() - t0
-
-            if res.status_code == 200:
-                data = res.json()
-                answer  = data.get("answer", "No answer returned.")
-                sources = data.get("sources", [])[:max_sources]
-
-                # persist to history
-                st.session_state.history.append({
-                    "query": query.strip(),
-                    "answer": answer,
-                    "sources": sources,
-                })
-
-                # ── Metrics row ──
-                st.markdown(
-                    f'<div style="margin:1rem 0 .6rem">'
-                    f'<span class="metric-pill">⏱ <span class="val">{elapsed:.2f}s</span></span>'
-                    f'<span class="metric-pill">📚 <span class="val">{len(sources)}</span> source{"s" if len(sources) != 1 else ""}</span>'
-                    f'</div>',
-                    unsafe_allow_html=True,
+    if st.button("📥 Ingest Documents", use_container_width=True):
+        with st.spinner("Ingesting documents..."):
+            try:
+                res = requests.get(
+                    "http://rag-app:8000/api/v1/query/ingest",
+                    timeout=300,
                 )
-
-                # ── Answer ──
-                st.markdown("#### Response")
-                st.markdown(
-                    f'<div class="answer-card"><p>{answer}</p></div>',
-                    unsafe_allow_html=True,
-                )
-
-                # ── Sources ──
-                if sources:
-                    st.markdown("#### Sources")
-                    for i, s in enumerate(sources):
-                        score = s.get("score", None)
-
-                        # badge colour tier
-                        if score is not None:
-                            if score >= 0.75:
-                                tier = "score-high"
-                            elif score >= 0.5:
-                                tier = "score-mid"
-                            else:
-                                tier = "score-low"
-                            badge = f'<span class="score-badge {tier}">{score:.4f}</span>' if show_scores else ""
-                        else:
-                            badge = ""
-
-                        label = f"Source {i + 1}{('  ·  ' + str(round(score, 4))) if (show_scores and score is not None) else ''}"
-
-                        with st.expander(label):
-                            st.markdown(
-                                f'<div class="source-text">{s.get("text", "")}</div>',
-                                unsafe_allow_html=True,
-                            )
+                if res.status_code == 200:
+                    st.success(res.json().get("response", "Done"))
                 else:
-                    st.info("No source documents returned.")
+                    st.error(f"Failed ({res.status_code})")
+            except Exception as e:
+                st.error(str(e))
 
-            else:
-                st.error(f"Request failed — HTTP {res.status_code}")
+    st.divider()
+    if st.button("🗑️ Clear Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
 
-        except requests.exceptions.ConnectionError:
-            st.error("Could not connect to the RAG backend. Is `rag-app` running?")
-        except requests.exceptions.Timeout:
-            st.error("Request timed out (300 s). The backend may be overloaded.")
+    st.markdown(
+        "<div style='position:absolute;bottom:1rem;font-size:0.75rem;color:#444;'>RAG Chat v2</div>",
+        unsafe_allow_html=True,
+    )
+
+
+# ─── Session state ────────────────────────────────────────────────────────────
+if "messages" not in st.session_state:
+    st.session_state.messages = []  # each item: {role, content, sources}
+
+
+# ─── Header ──────────────────────────────────────────────────────────────────
+st.markdown('<div class="chat-title">🧠 RAG Chat Assistant</div>', unsafe_allow_html=True)
+
+
+# ─── Render history ──────────────────────────────────────────────────────────
+def render_sources(sources: list):
+    """Render sources with progressive disclosure (collapsed + per-source expand)."""
+    if not sources:
+        return
+
+    with st.expander(
+        f"📚 {len(sources)} source{'s' if len(sources) > 1 else ''} retrieved",
+        expanded=False
+    ):
+        for i, src in enumerate(sources, 1):
+            text = src.get("text", "—")
+            score = src.get("score", None)
+
+            # ── Truncate preview ──
+            preview = text[:180] + ("..." if len(text) > 180 else "")
+            score_str = f"Score: {score:.4f}" if score is not None else ""
+
+            # ── Individual collapsible source ──
+            with st.expander(f"🔎 Source {i}", expanded=False):
+                st.markdown(
+                    f'<div class="source-card">{text}'
+                    f'{"<div class=source-score>" + score_str + "</div>" if score_str else ""}'
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+            # ── Preview shown outside (lightweight) ──
+            st.markdown(
+                f'<div class="source-card" style="opacity:0.7;">'
+                f'<strong style="color:#888;font-size:0.75rem;">SOURCE {i} (preview)</strong><br>{preview}'
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+        if msg["role"] == "assistant" and msg.get("sources"):
+            render_sources(msg["sources"])
+
+
+# ─── Chat input ──────────────────────────────────────────────────────────────
+user_input = st.chat_input("Ask something...")
+
+if user_input:
+    # Show user message
+    st.session_state.messages.append({"role": "user", "content": user_input, "sources": []})
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # Assistant turn
+    with st.chat_message("assistant"):
+        placeholder = st.empty()
+
+        full_text = ""
+        sources = []
+        raw_chunks = []
+        first_chunk = False
+        start = time.time()
+
+        # ── Thinking animation while waiting ──
+        dot_html = (
+            '<div class="thinking-label">'
+            '<span class="thinking-dot"></span>'
+            '<span class="thinking-dot"></span>'
+            '<span class="thinking-dot"></span>'
+            "</div>"
+        )
+        placeholder.markdown(dot_html, unsafe_allow_html=True)
+
+        try:
+            with requests.post(
+                API_URL,
+                json={"query": user_input},
+                stream=True,
+                timeout=120,
+            ) as r:
+                for chunk in r.iter_content(chunk_size=64, decode_unicode=True):
+                    if chunk:
+                        if not first_chunk:
+                            first_chunk = True
+                            placeholder.empty()
+                        raw_chunks.append(chunk)
+                        # Try to parse as JSON; if not complete yet, stream raw text
+                        combined = "".join(raw_chunks)
+                        try:
+                            data = json.loads(combined)
+                            # Valid JSON — extract structured fields
+                            full_text = data.get("answer", combined)
+                            sources = data.get("sources", [])
+                            placeholder.markdown(full_text)
+                        except json.JSONDecodeError:
+                            # Still streaming — show raw accumulated text
+                            placeholder.markdown(combined)
+
+            # Final parse after stream closes
+            combined = "".join(raw_chunks)
+            try:
+                data = json.loads(combined)
+                full_text = data.get("answer", combined)
+                sources = data.get("sources", [])
+            except json.JSONDecodeError:
+                full_text = combined
+                sources = []
+
+            placeholder.markdown(full_text)
+
         except Exception as e:
-            st.error(f"Unexpected error: {e}")
+            full_text = f"⚠️ Error: {str(e)}"
+            placeholder.markdown(full_text)
 
-elif submit and not query.strip():
-    st.warning("Please enter a query before submitting.")
+        # Render sources inline
+        render_sources(sources)
 
-# ── Footer ─────────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown(
-    '<p style="font-family:\'DM Mono\',monospace;font-size:.7rem;color:#3a3f55;text-align:center">'
-    'RAG Interface · Retrieval-Augmented Generation</p>',
-    unsafe_allow_html=True,
-)
+    # Persist to history
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": full_text,
+        "sources": sources,
+    })

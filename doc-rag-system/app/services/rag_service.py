@@ -13,6 +13,68 @@ from app.rag.synthesizer import get_synthesizer
 from app.config import *
 
 
+def run_rag_pipeline_stream(query: str, logger=None, request_id=None):
+
+    client = QdrantClient(url=QDRANT_URL)
+
+    vector_store = QdrantVectorStore(
+        client=client,
+        collection_name=COLLECTION_NAME
+    )
+
+    embed_model = OllamaEmbedding(
+        model_name=EMBED_MODEL,
+        base_url=OLLAMA_BASE_URL,
+        request_timeout=120.0
+    )
+
+    index = VectorStoreIndex.from_vector_store(
+        vector_store=vector_store,
+        embed_model=embed_model
+    )
+
+    reranker = SentenceTransformerRerank(
+        model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        top_n=3
+    )
+
+    llm = Ollama(
+        model=LLM_MODEL,
+        base_url=OLLAMA_BASE_URL,
+        request_timeout=300.0,
+        temperature=0,
+        additional_kwargs={
+            "num_ctx": 1024,
+            "num_predict": 128
+        },
+        streaming=True
+    )
+
+    retriever = get_hybrid_retriever(index, llm)
+    synthesizer = get_synthesizer(llm)
+
+    score_filter = ScoreThresholdPostprocessor(threshold=0.0)
+
+    query_engine = RetrieverQueryEngine(
+        retriever=retriever,
+        response_synthesizer=synthesizer,
+        node_postprocessors=[reranker, score_filter]
+    )
+
+    response = query_engine.query(query)
+
+    # 🔥 STREAM TOKENS
+    for token in response.response_gen:
+        yield token
+
+    # 🔥 SEND SOURCES AT THE END (important trick)
+    if hasattr(response, "source_nodes"):
+        yield "\n\n---\n📚 Sources:\n"
+        for node in response.source_nodes:
+            yield f"\n- ({node.score:.4f}) {node.text[:200]}...\n"
+
+
+
 def run_rag_pipeline(query: str, logger=None, request_id=None):
 
     # ---------------------------
@@ -78,11 +140,6 @@ def run_rag_pipeline(query: str, logger=None, request_id=None):
         response_synthesizer=synthesizer,
         node_postprocessors=[reranker, score_filter]
     )
-    # query_engine = RetrieverQueryEngine(
-    #     retriever=retriever,
-    #     response_synthesizer=synthesizer,
-    #     node_postprocessors=[reranker]
-    # )
 
     response = query_engine.query(query)
 
