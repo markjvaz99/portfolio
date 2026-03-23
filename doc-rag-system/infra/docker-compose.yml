@@ -32,6 +32,17 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  streamlit:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.streamlit
+    ports:
+        - "8501:8501"
+    volumes:
+      - ../app:/app/app
+    depends_on:
+      - rag-app
+
 volumes:
   ollama_data:
   qdrant_data: 

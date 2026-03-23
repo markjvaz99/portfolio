@@ -56,8 +56,7 @@ def ingest():
         mark_processed(filename, f_hash)
 
     if not documents:
-        print("No new documents to ingest")
-        return
+        return "No new documents to ingest"
 
     index = VectorStoreIndex.from_documents(
         documents,
@@ -65,4 +64,4 @@ def ingest():
         embed_model=embed_model
     )
 
-    print(f"Ingested {len(documents)} documents")
+    return f"Ingested {len(documents)} documents"
