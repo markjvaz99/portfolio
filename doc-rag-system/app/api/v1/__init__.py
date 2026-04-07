@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from . import routes_llm, routes_query
+from . import  routes_query
 
 api_router = APIRouter()
 

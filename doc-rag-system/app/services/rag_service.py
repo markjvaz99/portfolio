@@ -35,7 +35,7 @@ def run_rag_pipeline_stream(query: str, logger=None, request_id=None):
 
     reranker = SentenceTransformerRerank(
         model="cross-encoder/ms-marco-MiniLM-L-6-v2",
-        top_n=3
+        top_n=6
     )
 
     llm = Ollama(
@@ -44,8 +44,13 @@ def run_rag_pipeline_stream(query: str, logger=None, request_id=None):
         request_timeout=300.0,
         temperature=0,
         additional_kwargs={
-            "num_ctx": 1024,
-            "num_predict": 128
+            "num_ctx": 4096,
+            "num_predict": 1024,
+            "temperature": 0,
+            "top_k": 30,
+            "top_p": 0.9,
+            "repeat_penalty": 1.1,
+            "stop": ["User:", "Assistant:"]
         },
         streaming=True
     )
@@ -71,7 +76,7 @@ def run_rag_pipeline_stream(query: str, logger=None, request_id=None):
     if hasattr(response, "source_nodes"):
         yield "\n\n---\n📚 Sources:\n"
         for node in response.source_nodes:
-            yield f"\n- ({node.score:.4f}) {node.text[:200]}...\n"
+            yield f"\n- ({node.score:.4f}) {node.text}...\n"
 
 
 

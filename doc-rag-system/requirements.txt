@@ -18,3 +18,5 @@ llama-index-retrievers-bm25
 sentence-transformers
 streamlit
 requests
+pymupdf
+python-docx

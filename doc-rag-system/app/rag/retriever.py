@@ -18,14 +18,15 @@ def get_hybrid_retriever(index, llm):
 
         bm25_retriever = BM25Retriever.from_defaults(
             nodes=nodes,
-            similarity_top_k=3
+            similarity_top_k=6
         )
 
         hybrid_retriever = QueryFusionRetriever(
             [vector_retriever, bm25_retriever],
-            similarity_top_k=3,
+            similarity_top_k=4,
             num_queries=1,
-            mode="reciprocal_rerank",
+            mode="relative_score",
+            retriever_weights=[0.3, 0.7],
             llm=llm
         )
 

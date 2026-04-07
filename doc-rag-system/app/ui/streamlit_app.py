@@ -203,35 +203,63 @@ html, body {
 """, unsafe_allow_html=True)
 
 
-
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚙️ Actions")
     st.divider()
 
-    if st.button("📥 Ingest Documents", use_container_width=True):
-        with st.spinner("Ingesting documents..."):
-            try:
-                res = requests.get(
-                    "http://rag-app:8000/api/v1/query/ingest",
-                    timeout=300,
-                )
-                if res.status_code == 200:
-                    st.success(res.json().get("response", "Done"))
-                else:
-                    st.error(f"Failed ({res.status_code})")
-            except Exception as e:
-                st.error(str(e))
+    # ✅ Multi-file uploader
+    uploaded_files = st.file_uploader(
+        "Upload documents",
+        accept_multiple_files=True,
+        type=["txt", "pdf"],  # extend later if needed
+    )
+
+    if st.button("📥 Upload & Ingest", use_container_width=True):
+        if not uploaded_files:
+            st.warning("Please upload at least one file")
+        else:
+            with st.spinner("Uploading and ingesting..."):
+                try:
+                    # 🔹 Prepare multipart form-data
+                    files_payload = [
+                        (
+                            "files",
+                            (file.name, file.getvalue(), "text/plain")
+                        )
+                        for file in uploaded_files
+                    ]
+
+                    res = requests.post(
+                        "http://rag-app:8000/api/v1/query/upload",  # ✅ match your API
+                        files=files_payload,
+                        timeout=300,
+                    )
+
+                    if res.status_code == 200:
+                        data = res.json()
+                        st.success(f"Ingested: {data.get('total_ingested', 0)} files")
+
+                        if data.get("processed"):
+                            st.markdown("✅ Processed:")
+                            for f in data["processed"]:
+                                st.write(f"- {f}")
+
+                        if data.get("skipped"):
+                            st.markdown("⏭️ Skipped (duplicates/invalid):")
+                            for f in data["skipped"]:
+                                st.write(f"- {f}")
+                    else:
+                        st.error(f"Failed ({res.status_code}): {res.text}")
+
+                except Exception as e:
+                    st.error(str(e))
 
     st.divider()
+
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
-
-    st.markdown(
-        "<div style='position:absolute;bottom:1rem;font-size:0.75rem;color:#444;'>RAG Chat v2</div>",
-        unsafe_allow_html=True,
-    )
 
 
 # ─── Session state ────────────────────────────────────────────────────────────

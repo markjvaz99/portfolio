@@ -1,12 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.schemas.query import QueryRequest
 from app.config import *
 from app.services.ingestion_service import ingest
+from app.services.file_ingestion_service import ingest_files
 from app.utils.logger import get_logger
 import time
 import uuid
 from app.services.rag_service import run_rag_pipeline, run_rag_pipeline_stream
 from fastapi.responses import StreamingResponse
+from typing import List
 
 logger = get_logger(__name__)
 
@@ -16,6 +18,17 @@ router = APIRouter()
 def query():
     return {"response": ingest()}
 
+@router.post("/upload")
+async def upload_files(files: List[UploadFile] = File(...)):
+    try:
+        result = await ingest_files(files)
+        return result
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 @router.post("/test-rag-stream")
 def test_rag_stream(request: QueryRequest):
